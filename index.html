@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -290,6 +291,7 @@ body {
   <div class="header-row">
     <div class="logo">Health<em>Log</em><sup>PRO</sup></div>
     <div class="hdr-btns">
+      <button class="hbtn" onclick="manageApiKey()" title="API Key Settings">🔑</button>
       <button class="hbtn scan" onclick="openUpload()">📄 Scan</button>
       <button class="hbtn primary" onclick="openAdd()">＋ Add</button>
     </div>
@@ -748,14 +750,21 @@ Only include keys where values clearly appear in the report. Values must be plai
         :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Extract all lab values as JSON.'}];
       let res;
       try {
+        const apiKey = localStorage.getItem('hlp_apikey')||'';
+        if (!apiKey) { const e=new Error('no_api_key'); e.code='no_api_key'; throw e; }
         res=await fetch('https://api.anthropic.com/v1/messages',{
-          method:'POST',headers:{'Content-Type':'application/json'},
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version':'2023-06-01',
+            'anthropic-dangerous-direct-browser-access':'true'
+          },
           body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYS,messages:[{role:'user',content}]})
         });
       } catch(netErr) {
-        // Network/CORS error — file opened locally or no internet
         fileQueue[i].status='error';
-        fileQueue[i].errorMsg = 'network';
+        fileQueue[i].errorMsg = netErr.code==='no_api_key' ? 'no_api_key' : 'network';
         renderQueue(); continue;
       }
       if (!res.ok) {
@@ -777,12 +786,15 @@ Only include keys where values clearly appear in the report. Values must be plai
   // AGGREGATE: merge all results — first non-null value per key wins
   spinner.style.display='none';
 
-  // Check if all failed due to network (CORS / opened as local file)
+  // Check failure reasons
+  const noKeyFails = fileQueue.filter(q=>q.errorMsg==='no_api_key');
   const networkFails = fileQueue.filter(q=>q.errorMsg==='network');
   const isLocalFile = location.protocol==='file:' || location.protocol==='content:' || location.hostname==='';
 
   if (!allResults.length) {
-    if (networkFails.length || isLocalFile) {
+    if (noKeyFails.length) {
+      showApiKeySetup();
+    } else if (networkFails.length || isLocalFile) {
       showCorsError();
     } else {
       const errMsgs = fileQueue.filter(q=>q.errorMsg).map(q=>q.errorMsg).join('; ');
@@ -804,6 +816,43 @@ Only include keys where values clearly appear in the report. Values must be plai
   ps.textContent='';
 
   showAggPreview(merged, allResults.length);
+}
+
+function showApiKeySetup() {
+  const pt=document.getElementById('parseText');
+  const ps=document.getElementById('parseSub');
+  pt.innerHTML=`<span style="color:var(--warn)">⚠️</span> API key needed`;
+  ps.textContent='';
+  document.getElementById('aggPreview').innerHTML=`
+    <div style="background:rgba(79,163,247,0.07);border:1px solid rgba(79,163,247,0.2);border-radius:14px;padding:16px;margin-top:4px">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">🔑 One-time Setup: Anthropic API Key</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">
+        The AI Scan feature needs your personal Anthropic API key. It's stored <b style="color:var(--text)">only on this device</b> (localStorage) and never sent anywhere except directly to Anthropic.<br><br>
+        <b style="color:var(--text)">Get your free key:</b><br>
+        1. Go to <b style="color:var(--accent)">console.anthropic.com</b><br>
+        2. Sign up / Log in → <b>API Keys</b> → <b>Create Key</b><br>
+        3. Copy the key (starts with <code style="font-size:11px;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:4px">sk-ant-...</code>)<br>
+        4. Paste it below ↓
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input id="apiKeyInput" type="password" placeholder="sk-ant-api03-..." 
+          style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border2);background:var(--card);font-family:Sora,sans-serif;font-size:13px;color:var(--text);outline:none;"
+          oninput="this.style.borderColor=this.value.startsWith('sk-ant')?'var(--good)':'var(--border2)'">
+        <button class="sbtn" style="margin-top:0" onclick="saveApiKey()">💾 Save Key &amp; Retry Scan</button>
+        <button class="sbtn sec" style="margin-top:0" onclick="manualFallback()">✏️ Skip — Enter Values Manually</button>
+      </div>
+    </div>`;
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-ant')) { 
+    toast('Invalid key — should start with sk-ant…'); 
+    return; 
+  }
+  localStorage.setItem('hlp_apikey', key);
+  toast('API key saved ✓ — retrying scan…');
+  setTimeout(()=>startParsing(), 800);
 }
 
 function showCorsError() {
@@ -834,6 +883,46 @@ function showCorsError() {
 function manualFallback() {
   cm('uploadOverlay');
   openAdd();
+}
+
+function manageApiKey() {
+  const existing = localStorage.getItem('hlp_apikey')||'';
+  const masked = existing ? 'sk-ant-…'+existing.slice(-6) : 'Not set';
+  const action = existing
+    ? `<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Current key: <code style="color:var(--accent2)">${masked}</code></div>
+       <button class="sbtn" style="margin-top:0" onclick="promptNewKey()">🔄 Replace Key</button>
+       <button class="sbtn sec" style="margin-top:8px" onclick="if(confirm('Clear API key?')){localStorage.removeItem('hlp_apikey');toast('Key cleared');cm('addOverlay')}">🗑 Clear Key</button>`
+    : `<button class="sbtn" style="margin-top:0" onclick="promptNewKey()">🔑 Set API Key</button>`;
+
+  document.getElementById('addTitle').textContent = '🔑 API Key';
+  // reuse add modal content area
+  document.querySelector('#addOverlay .modal').innerHTML = `
+    <div class="drag-pill"></div>
+    <div class="modal-title"><span>API Key Settings</span><button class="xbtn" onclick="cm('addOverlay')">✕</button></div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
+      Your Anthropic API key is stored <b style="color:var(--text)">only on this device</b>.<br>
+      Get one free at <b style="color:var(--accent)">console.anthropic.com</b> → API Keys.
+    </div>
+    ${action}`;
+  document.getElementById('addOverlay').classList.add('open');
+}
+
+function promptNewKey() {
+  document.querySelector('#addOverlay .modal').innerHTML = `
+    <div class="drag-pill"></div>
+    <div class="modal-title"><span>Enter API Key</span><button class="xbtn" onclick="cm('addOverlay');location.reload()">✕</button></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Paste your key below. It starts with <code style="font-size:11px">sk-ant-</code></div>
+    <input id="apiKeyInput2" type="password" placeholder="sk-ant-api03-..."
+      style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border2);background:var(--card);font-family:Sora,sans-serif;font-size:13px;color:var(--text);outline:none;margin-bottom:12px"
+      oninput="this.style.borderColor=this.value.startsWith('sk-ant')?'var(--good)':'var(--border2)'">
+    <button class="sbtn" style="margin-top:0" onclick="
+      const k=document.getElementById('apiKeyInput2').value.trim();
+      if(!k.startsWith('sk-ant')){toast('Invalid key');return;}
+      localStorage.setItem('hlp_apikey',k);
+      toast('API key saved ✓');
+      cm('addOverlay');
+      location.reload();
+    ">💾 Save Key</button>`;
 }
 
 function showAggPreview(merged, fileCount) {
