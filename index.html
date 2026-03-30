@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080f1e">
+<title>HealthLog Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080f1e; --surface:#0e1a30; --card:#122040; --card2:#162850;
+  --border:#1e3256; --border2:#253d68;
+  --accent:#4fa3f7; --accent2:#00e5b4; --warn:#ffb347; --danger:#ff5c5c; --good:#3ddc84;
+  --text:#ddeeff; --muted:#6888aa; --muted2:#4a6280;
+  --radius:20px; --r-sm:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:480px;margin:0 auto;padding-bottom:90px;}
+
+/* HEADER */
+.header{padding:18px 18px 0;background:rgba(8,15,30,0.95);position:sticky;top:0;z-index:100;backdrop-filter:blur(16px);border-bottom:1px solid rgba(79,163,247,0.1);}
+.header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.logo{font-family:'Fraunces',serif;font-size:21px;color:var(--text);}
+.logo em{font-style:italic;color:var(--accent);}
+.logo sup{font-family:'Sora',sans-serif;font-size:9px;color:var(--accent2);font-weight:600;letter-spacing:1px;vertical-align:super;}
+.hdr-btns{display:flex;gap:8px;}
+.hbtn{padding:8px 14px;border-radius:50px;font-size:12px;font-weight:600;font-family:'Sora',sans-serif;cursor:pointer;border:1.5px solid var(--border2);background:var(--card);color:var(--text);display:flex;align-items:center;gap:5px;transition:all .18s;}
+.hbtn:active{transform:scale(.95);opacity:.8;}
+.hbtn.primary{background:var(--accent);border-color:var(--accent);color:#080f1e;}
+
+/* NAV */
+.nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;}
+.nav::-webkit-scrollbar{display:none;}
+.ntab{flex-shrink:0;padding:10px 16px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2.5px solid transparent;letter-spacing:.3px;transition:all .2s;text-transform:uppercase;}
+.ntab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* CONTENT */
+.content{padding:14px 16px;}
+
+/* SESSION ACCORDION */
+.session{margin-bottom:16px;animation:fadeUp .35s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.session-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:0 2px;cursor:pointer;user-select:none;}
+.session-header:active{opacity:.8;}
+.session-date-pill{background:var(--accent);color:#080f1e;font-size:11px;font-weight:700;padding:5px 12px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
+.session-line{flex:1;height:1px;background:var(--border2);}
+.session-flag{font-size:11px;font-weight:600;flex-shrink:0;}
+.session-chevron{font-size:11px;color:var(--muted);flex-shrink:0;transition:transform .3s ease;}
+.session.open .session-chevron{transform:rotate(180deg);}
+.session-peek{display:flex;gap:5px;flex-wrap:wrap;padding:0 2px 10px;align-items:center;}
+.session-peek-chip{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);}
+.session-body{overflow:hidden;max-height:0;opacity:0;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .28s ease;}
+.session.open .session-body{max-height:3000px;opacity:1;}
+
+/* PANEL CARD */
+.panel-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:8px;overflow:hidden;}
+.panel-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--card2);border-bottom:1px solid var(--border);}
+.panel-icon{font-size:14px;}
+.panel-title{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;flex:1;}
+.panel-alert{font-size:10px;}
+.metric-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(30,50,86,.5);gap:8px;}
+.metric-row:last-child{border-bottom:none;}
+.mr-name{flex:1;}
+.mr-name .mn{font-size:13px;color:var(--text);}
+.mr-name .mu{font-size:10px;color:var(--muted);margin-top:1px;}
+.mr-val{font-size:15px;font-weight:600;text-align:right;}
+.mr-val .vu{font-size:10px;font-weight:400;color:var(--muted);}
+.mr-badge{font-size:9px;font-weight:700;padding:3px 7px;border-radius:20px;min-width:42px;text-align:center;letter-spacing:.3px;}
+.s-ok{color:var(--good);} .s-hi{color:var(--danger);} .s-lo{color:var(--warn);} .s-na{color:var(--muted);}
+.b-ok{background:rgba(61,220,132,.12);color:var(--good);}
+.b-hi{background:rgba(255,92,92,.12);color:var(--danger);}
+.b-lo{background:rgba(255,179,71,.12);color:var(--warn);}
+.b-na{background:rgba(104,136,170,.1);color:var(--muted);}
+
+/* SESSION ACTIONS */
+.sess-actions{display:flex;gap:6px;padding:4px 2px 10px;}
+.sess-btn{background:none;border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-size:12px;padding:5px 12px;cursor:pointer;font-family:'Sora',sans-serif;transition:all .15s;}
+.sess-btn:active{background:var(--card2);}
+.sess-btn.danger{border-color:rgba(255,92,92,.3);color:var(--danger);}
+
+/* CHART */
+.chart-wrap{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);padding:14px;margin-bottom:12px;}
+.chart-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.cpill{padding:5px 12px;border-radius:50px;font-size:11px;font-weight:600;border:1px solid var(--border2);color:var(--muted);cursor:pointer;background:var(--card2);transition:all .18s;}
+.cpill.active{border-color:var(--accent);background:rgba(79,163,247,.15);color:var(--accent);}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .22s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border-radius:24px 24px 0 0;padding:20px 18px 44px;width:100%;transform:translateY(50px);transition:transform .3s cubic-bezier(.34,1.1,.64,1);max-height:93vh;overflow-y:auto;}
+.overlay.open .modal{transform:translateY(0);}
+.drag-pill{width:36px;height:4px;background:var(--border2);border-radius:4px;margin:0 auto 18px;}
+.modal-title{font-family:'Fraunces',serif;font-size:19px;color:var(--text);margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
+.xbtn{background:var(--card2);border:1px solid var(--border2);border-radius:50%;width:30px;height:30px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;}
+
+/* FORM */
+.fsec{margin-bottom:16px;}
+.fsec-title{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border);}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg.full{grid-column:span 2;}
+.fg label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.fg input,.fg select{padding:11px 12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--card);font-family:'Sora',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .18s;-webkit-appearance:none;appearance:none;}
+.fg input:focus,.fg select:focus{border-color:var(--accent);}
+.fg input::placeholder{color:var(--muted2);}
+.fg select option{background:var(--card2);}
+.sbtn{width:100%;padding:14px;background:var(--accent);color:#080f1e;border:none;border-radius:13px;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:14px;transition:opacity .18s;}
+.sbtn:active{opacity:.8;}
+.sbtn.sec{background:transparent;color:var(--accent2);border:1.5px solid var(--accent2);margin-top:8px;}
+.sbtn.warn{background:transparent;color:var(--warn);border:1.5px solid var(--warn);margin-top:8px;}
+
+.custom-metric-row{
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:12px;padding:12px;margin-bottom:10px;
+}
+.crow-label{
+  font-size:10px;color:var(--accent2);font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;
+}
+.crow-top{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.crow-bottom{display:flex;gap:8px;align-items:flex-end;}
+.crow-bottom .fg{flex:1;}
+.rm-btn{
+  background:rgba(255,92,92,.1);border:1px solid rgba(255,92,92,.3);
+  border-radius:8px;color:var(--danger);padding:11px 14px;cursor:pointer;
+  font-size:13px;font-weight:600;flex-shrink:0;
+}
+.rm-btn:active{background:rgba(255,92,92,.2);}
+
+/* MISC */
+.slabel{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.empty{text-align:center;padding:52px 24px;color:var(--muted);}
+.ei{font-size:46px;margin-bottom:14px;}
+.et{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.es{font-size:13px;line-height:1.6;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:#1a3460;color:var(--text);padding:11px 20px;border-radius:50px;font-size:12px;font-weight:600;z-index:400;transition:transform .28s;white-space:nowrap;border:1px solid var(--accent);box-shadow:0 6px 24px rgba(79,163,247,.2);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.ref-group{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.rg-head{background:var(--card2);padding:10px 14px;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);}
+.rg-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(30,50,86,.5);font-size:12px;}
+.rg-row:last-child{border-bottom:none;}
+.rg-range{color:var(--muted);font-size:11px;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* KEY MODAL */
+.key-modal{background:var(--surface);border-radius:24px 24px 0 0;padding:24px 18px 44px;width:100%;transform:translateY(50px);transition:transform .3s cubic-bezier(.34,1.1,.64,1);max-height:70vh;overflow-y:auto;}
+.overlay.open .key-modal{transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="logo">Health<em>Log</em><sup>PRO</sup></div>
+    <div class="hdr-btns">
+      <button class="hbtn primary" onclick="openAdd()">＋ Add</button>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="ntab active" onclick="setTab('sessions',this)">Sessions</div>
+    <div class="ntab" onclick="setTab('trends',this)">Trends</div>
+    <div class="ntab" onclick="setTab('summary',this)">Summary</div>
+    <div class="ntab" onclick="setTab('reference',this)">Reference</div>
+  </div>
+</div>
+
+<div class="content" id="content"></div>
+
+<!-- ══ ADD / EDIT MODAL (static HTML, never replaced) ══ -->
+<div class="overlay" id="addOverlay">
+<div class="modal" id="addModal">
+  <div class="drag-pill"></div>
+  <div class="modal-title">
+    <span id="addTitle">New Session</span>
+    <button class="xbtn" onclick="cm('addOverlay')">✕</button>
+  </div>
+
+  <!-- Date -->
+  <div class="fsec">
+    <div class="fsec-title">📅 Date</div>
+    <div class="fgrid">
+      <div class="fg full"><label>Test Date</label><input type="date" id="f-date"></div>
+    </div>
+  </div>
+
+  <!-- Built-in panels — each collapsible section -->
+  <div class="fsec">
+    <div class="fsec-title">🩸 Basic Panel</div>
+    <div class="fgrid">
+      <div class="fg"><label>Blood Sugar mg/dL</label><input type="number" id="f-sugar" placeholder="100"></div>
+      <div class="fg"><label>HbA1c %</label><input type="number" id="f-hba1c" placeholder="5.4" step="0.1"></div>
+      <div class="fg full"><label>Avg Blood Glucose mg/dL</label><input type="number" id="f-avgGlucose" placeholder="108" step="0.1"></div>
+    </div>
+  </div>
+
+  <div class="fsec">
+    <div class="fsec-title">🫀 Lipid Profile</div>
+    <div class="fgrid">
+      <div class="fg"><label>Cholesterol mg/dL</label><input type="number" id="f-chol" placeholder="176"></div>
+      <div class="fg"><label>Triglycerides mg/dL</label><input type="number" id="f-trig" placeholder="83"></div>
+      <div class="fg"><label>HDL mg/dL</label><input type="number" id="f-hdl" placeholder="40"></div>
+      <div class="fg"><label>LDL mg/dL</label><input type="number" id="f-ldl" placeholder="119"></div>
+      <div class="fg"><label>VLDL mg/dL</label><input type="number" id="f-vldl" placeholder="17"></div>
+      <div class="fg"><label>TC/HDL Ratio</label><input type="number" id="f-tcholRatio" placeholder="4.4" step="0.1"></div>
+      <div class="fg"><label>LDL/HDL Ratio</label><input type="number" id="f-ldlhdlRatio" placeholder="3.0" step="0.1"></div>
+    </div>
+  </div>
+
+  <div class="fsec">
+    <div class="fsec-title">🫁 Renal Function</div>
+    <div class="fgrid">
+      <div class="fg"><label>Urea mg/dL</label><input type="number" id="f-urea" placeholder="36" step="0.1"></div>
+      <div class="fg"><label>Creatinine mg/dL</label><input type="number" id="f-creatinine" placeholder="0.9" step="0.01"></div>
+      <div class="fg"><label>Uric Acid mg/dL</label><input type="number" id="f-uric" placeholder="5.6" step="0.1"></div>
+    </div>
+  </div>
+
+  <div class="fsec">
+    <div class="fsec-title">🦋 Thyroid</div>
+    <div class="fgrid">
+      <div class="fg"><label>TSH mIU/L</label><input type="number" id="f-thyroid" placeholder="4.2" step="0.001"></div>
+      <div class="fg"><label>T3 ng/dL</label><input type="number" id="f-t3" placeholder="100" step="0.1"></div>
+      <div class="fg"><label>T4 µg/dL</label><input type="number" id="f-t4" placeholder="8.0" step="0.1"></div>
+    </div>
+  </div>
+
+  <div class="fsec">
+    <div class="fsec-title">☀️ Vitamins & Minerals</div>
+    <div class="fgrid">
+      <div class="fg"><label>Vitamin D ng/mL</label><input type="number" id="f-vitd" placeholder="28.9" step="0.1"></div>
+      <div class="fg"><label>Vitamin B12 pg/mL</label><input type="number" id="f-vitb12" placeholder="300" step="0.1"></div>
+      <div class="fg"><label>Hemoglobin g/dL</label><input type="number" id="f-hb" placeholder="14.5" step="0.1"></div>
+    </div>
+  </div>
+
+  <!-- CUSTOM METRICS section -->
+  <div class="fsec">
+    <div class="fsec-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>➕ Custom Tests</span>
+      <div style="display:flex;gap:6px;">
+        <button onclick="addCustomRow()" style="background:rgba(0,229,180,.1);border:1px solid var(--accent2);border-radius:20px;color:var(--accent2);font-size:11px;font-weight:600;padding:3px 10px;cursor:pointer;font-family:'Sora',sans-serif;">+ Add Field</button>
+      </div>
+    </div>
+    <div id="customRows"></div>
+    <div id="noCustomHint" style="font-size:12px;color:var(--muted2);padding:8px 4px;line-height:1.6;">Tap <b style="color:var(--accent2)">+ Add Field</b> to log any test not listed above.<br><span style="font-size:11px;">e.g. Iron, Ferritin, WBC, Platelets, Sodium, Potassium…</span></div>
+  </div>
+
+  <button class="sbtn" onclick="saveRecord()">💾 Save Session</button>
+</div>
+</div>
+
+<!-- ══ CONFIRM DELETE MODAL ══ -->
+<div class="overlay" id="delOverlay">
+<div class="modal" style="padding:24px 18px 36px;">
+  <div class="drag-pill"></div>
+  <div style="font-size:17px;font-weight:700;margin-bottom:10px;">Delete session?</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">This cannot be undone.</div>
+  <button class="sbtn" style="background:var(--danger);border-color:var(--danger);" onclick="confirmDelete()">🗑 Yes, Delete</button>
+  <button class="sbtn sec" onclick="cm('delOverlay')">Cancel</button>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════
+// BUILT-IN METRICS CONFIG
+// ══════════════════════════════════════════════════════════════
+const REF = {
+  sugar:       {name:'Blood Sugar',       unit:'mg/dL', lo:70,  hi:99,   group:'Basic'},
+  hba1c:       {name:'HbA1c',             unit:'%',     lo:0,   hi:5.6,  group:'Basic'},
+  avgGlucose:  {name:'Avg Blood Glucose', unit:'mg/dL', lo:70,  hi:115,  group:'Basic'},
+  chol:        {name:'Cholesterol',       unit:'mg/dL', lo:0,   hi:200,  group:'Lipid'},
+  trig:        {name:'Triglycerides',     unit:'mg/dL', lo:0,   hi:150,  group:'Lipid'},
+  hdl:         {name:'HDL',               unit:'mg/dL', lo:40,  hi:999,  group:'Lipid', hdlMode:true},
+  ldl:         {name:'LDL',               unit:'mg/dL', lo:0,   hi:100,  group:'Lipid'},
+  vldl:        {name:'VLDL',              unit:'mg/dL', lo:5,   hi:40,   group:'Lipid'},
+  tcholRatio:  {name:'TC/HDL Ratio',      unit:'',      lo:0,   hi:5,    group:'Lipid'},
+  ldlhdlRatio: {name:'LDL/HDL Ratio',     unit:'',      lo:0,   hi:3.5,  group:'Lipid'},
+  urea:        {name:'Urea',              unit:'mg/dL', lo:10,  hi:45,   group:'Renal'},
+  creatinine:  {name:'Creatinine',        unit:'mg/dL', lo:0.7, hi:1.3,  group:'Renal'},
+  uric:        {name:'Uric Acid',         unit:'mg/dL', lo:3.5, hi:7.2,  group:'Renal'},
+  thyroid:     {name:'TSH',               unit:'mIU/L', lo:0.4, hi:4.0,  group:'Thyroid'},
+  t3:          {name:'T3',                unit:'ng/dL', lo:80,  hi:200,  group:'Thyroid'},
+  t4:          {name:'T4',                unit:'µg/dL', lo:4.5, hi:12.5, group:'Thyroid'},
+  vitd:        {name:'Vitamin D',         unit:'ng/mL', lo:20,  hi:50,   group:'Vitamins'},
+  vitb12:      {name:'Vitamin B12',       unit:'pg/mL', lo:200, hi:900,  group:'Vitamins'},
+  hb:          {name:'Hemoglobin',        unit:'g/dL',  lo:13.5,hi:17.5, group:'Vitamins'},
+};
+
+const GROUPS = {
+  Basic:    {icon:'🩸', keys:['sugar','hba1c','avgGlucose']},
+  Lipid:    {icon:'🫀', keys:['chol','trig','hdl','ldl','vldl','tcholRatio','ldlhdlRatio']},
+  Renal:    {icon:'🫁', keys:['urea','creatinine','uric']},
+  Thyroid:  {icon:'🦋', keys:['thyroid','t3','t4']},
+  Vitamins: {icon:'☀️', keys:['vitd','vitb12','hb']},
+};
+
+const BUILTIN_FIELDS = Object.keys(REF);
+
+// ══════════════════════════════════════════════════════════════
+// SEED DATA
+// ══════════════════════════════════════════════════════════════
+const SEED = [
+  {date:'2024-02-27', thyroid:9.9, vitd:19},
+  {date:'2024-05-27', sugar:101, thyroid:24.4, uric:8.9, chol:265, vitd:63.8},
+  {date:'2024-07-05', sugar:102, thyroid:9, uric:8, chol:249, vitd:37},
+  {date:'2024-08-20', sugar:109, thyroid:5.3, uric:6.9, chol:220},
+  {date:'2024-09-29', sugar:105, thyroid:3.6, uric:8, chol:256},
+  {date:'2024-10-20', sugar:94, thyroid:8.8, uric:6.5, chol:215},
+  {date:'2024-11-09', sugar:96, thyroid:4.7, uric:7.2, chol:236, hba1c:5.2},
+  {date:'2024-12-11', sugar:98, thyroid:3.9, uric:6.1, chol:190},
+  {date:'2025-04-12', sugar:101, chol:205, hba1c:5.5},
+  {date:'2025-08-15', sugar:107, thyroid:4.968, chol:217, hba1c:5.4},
+  {date:'2025-10-13', thyroid:5.227, uric:7.4, chol:236},
+  {date:'2026-02-01', sugar:106, uric:6, chol:240, vitd:28.9, hba1c:5.3},
+  {date:'2026-03-29', hba1c:5.4, avgGlucose:108.3, chol:176, trig:83, hdl:40, ldl:119, vldl:17, tcholRatio:4.4, ldlhdlRatio:3.0, urea:36, creatinine:0.9, uric:5.6},
+];
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let records = [];         // [{date, ...builtins, _custom:[{name,unit,value}]}]
+let customMetaDefs = [];  // [{name,unit}] — user-defined metric definitions saved globally
+let currentTab = 'sessions';
+let editIndex = null;
+let deleteIndex = null;
+let chartKey = 'chol';
+let chartInst = null;
+let customRowCount = 0;   // for unique IDs in the form
+
+function load() {
+  const s = localStorage.getItem('hlp_v5');
+  if (s) {
+    const parsed = JSON.parse(s);
+    records = parsed.records || [];
+    customMetaDefs = parsed.customMetaDefs || [];
+  } else {
+    records = JSON.parse(JSON.stringify(SEED));
+    customMetaDefs = [];
+    persist();
+  }
+}
+
+function persist() {
+  localStorage.setItem('hlp_v5', JSON.stringify({records, customMetaDefs}));
+}
+
+function byDate() { return [...records].sort((a,b)=>new Date(b.date)-new Date(a.date)); }
+
+// ══════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════
+function pn(v) { const x=parseFloat(v); return isNaN(x)?null:x; }
+
+function fmtDate(d) {
+  return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+function fmtShort(d) {
+  return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+}
+
+function st(key, val, customRef) {
+  if (val==null) return 'na';
+  const r = customRef || REF[key];
+  if (!r) return 'na';
+  if (r.hdlMode) return val < r.lo ? 'lo' : 'ok';
+  if (val > r.hi) return 'hi';
+  if (val < r.lo) return 'lo';
+  return 'ok';
+}
+
+function bdg(key, val, customRef) {
+  const s = st(key, val, customRef);
+  return {ok:['b-ok','NORMAL'], hi:['b-hi','HIGH'], lo:['b-lo','LOW'], na:['b-na','—']}[s];
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER ROUTER
+// ══════════════════════════════════════════════════════════════
+function render() {
+  const c = document.getElementById('content');
+  c.innerHTML = '';
+  if (currentTab==='sessions') renderSessions(c);
+  else if (currentTab==='trends') renderTrends(c);
+  else if (currentTab==='summary') renderSummary(c);
+  else renderRef(c);
+}
+
+// ══════════════════════════════════════════════════════════════
+// SESSIONS TAB
+// ══════════════════════════════════════════════════════════════
+function renderSessions(c) {
+  const data = byDate();
+  if (!data.length) {
+    c.innerHTML=`<div class="empty"><div class="ei">🧪</div><div class="et">No sessions yet</div><div class="es">Tap <b>+ Add</b> to log your first test results.</div></div>`;
+    return;
+  }
+
+  let html = `<div class="slabel">${data.length} Test Session${data.length>1?'s':''} — tap date to expand</div>`;
+
+  data.forEach((r, vi) => {
+    const ri = records.indexOf(r);
+
+    // Collect all values: built-in + custom
+    const builtinKeys = BUILTIN_FIELDS.filter(k => r[k]!=null);
+    const customEntries = r._custom || [];
+    const totalCount = builtinKeys.length + customEntries.length;
+
+    // Flags (built-in only for now, custom shown as neutral)
+    const abnormal = builtinKeys.filter(k => st(k,r[k])!=='ok');
+    const flagHtml = abnormal.length
+      ? `<span class="session-flag" style="color:var(--warn)">${abnormal.length} flag${abnormal.length>1?'s':''}</span>`
+      : totalCount > 0
+        ? `<span class="session-flag" style="color:var(--good)">✓ All OK</span>`
+        : `<span class="session-flag" style="color:var(--muted)">Empty</span>`;
+
+    // Peek chips (first 4 values)
+    const allForPeek = [
+      ...builtinKeys.map(k=>({label:REF[k].name.split(' ')[0], val:r[k], s:st(k,r[k])})),
+      ...customEntries.map(e=>({label:e.name.split(' ')[0], val:e.value, s:'na'}))
+    ].slice(0,4);
+
+    const chips = allForPeek.map(({label,val,s})=>{
+      const col = s==='ok'?'var(--good)':s==='hi'?'var(--danger)':s==='lo'?'var(--warn)':'var(--muted)';
+      return `<span class="session-peek-chip" style="color:${col};border-color:${col}33">${label}: ${val}</span>`;
+    }).join('');
+    const more = totalCount>4 ? `<span style="font-size:10px;color:var(--muted)">+${totalCount-4} more</span>` : '';
+
+    // Build panel cards for body
+    const panelCards = buildPanelCards(r);
+
+    html += `<div class="session" id="sess-${vi}" style="animation-delay:${vi*0.04}s">
+      <div class="session-header" onclick="toggleSess('sess-${vi}')">
+        <div class="session-date-pill">📅 ${fmtDate(r.date)}</div>
+        <div class="session-line"></div>
+        ${flagHtml}
+        <span class="session-chevron">▾</span>
+      </div>
+      <div class="session-peek" id="peek-${vi}">
+        ${chips}${more}
+        <span style="flex:1"></span>
+        <button class="sess-btn" onclick="event.stopPropagation();openAdd(${ri})">✏️ Edit</button>
+        <button class="sess-btn danger" onclick="event.stopPropagation();askDelete(${ri})">🗑</button>
+      </div>
+      <div class="session-body" id="body-${vi}">
+        <div class="sess-actions">
+          <button class="sess-btn" onclick="openAdd(${ri})">✏️ Edit Session</button>
+          <button class="sess-btn danger" onclick="askDelete(${ri})">🗑 Delete</button>
+        </div>
+        ${panelCards || '<div style="padding:10px 2px;color:var(--muted);font-size:13px">No values recorded</div>'}
+      </div>
+    </div>`;
+  });
+
+  c.innerHTML = html;
+}
+
+function buildPanelCards(r) {
+  let html = '';
+
+  // Built-in groups
+  Object.entries(GROUPS).forEach(([gname, g]) => {
+    const present = g.keys.filter(k => r[k]!=null);
+    if (!present.length) return;
+    const hiN = present.filter(k=>st(k,r[k])==='hi').length;
+    const loN = present.filter(k=>st(k,r[k])==='lo').length;
+    const alertTxt = hiN||loN
+      ? `<span class="panel-alert" style="color:${hiN?'var(--danger)':'var(--warn)'}">${[hiN?`${hiN}↑`:'',loN?`${loN}↓`:''].filter(Boolean).join(' ')}</span>`
+      : `<span class="panel-alert" style="color:var(--good)">✓</span>`;
+
+    html += `<div class="panel-card"><div class="panel-header"><span class="panel-icon">${g.icon}</span><span class="panel-title">${gname}</span>${alertTxt}</div>`;
+    present.forEach(k => {
+      const val=r[k]; const [bc,bl]=bdg(k,val); const sc=`s-${st(k,val)}`;
+      html += `<div class="metric-row">
+        <div class="mr-name"><div class="mn">${REF[k].name}</div><div class="mu">${REF[k].unit||'ratio'}</div></div>
+        <div class="mr-val ${sc}">${val}<span class="vu"> ${REF[k].unit}</span></div>
+        <div class="mr-badge ${bc}">${bl}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  // Custom metrics panel
+  const customs = r._custom || [];
+  if (customs.length) {
+    html += `<div class="panel-card"><div class="panel-header"><span class="panel-icon">🧬</span><span class="panel-title">Other Tests</span></div>`;
+    customs.forEach(e => {
+      html += `<div class="metric-row">
+        <div class="mr-name"><div class="mn">${e.name}</div><div class="mu">${e.unit||''}</div></div>
+        <div class="mr-val s-na">${e.value}<span class="vu"> ${e.unit||''}</span></div>
+        <div class="mr-badge b-na">—</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  return html;
+}
+
+function toggleSess(id) {
+  const sess = document.getElementById(id);
+  const idx = id.split('-')[1];
+  const peek = document.getElementById('peek-'+idx);
+  const isOpen = sess.classList.contains('open');
+  // close all
+  document.querySelectorAll('.session.open').forEach(s => {
+    const i = s.id.split('-')[1];
+    s.classList.remove('open');
+    const p = document.getElementById('peek-'+i);
+    if (p) p.style.display = 'flex';
+  });
+  if (!isOpen) {
+    sess.classList.add('open');
+    if (peek) peek.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// TRENDS TAB
+// ══════════════════════════════════════════════════════════════
+function renderTrends(c) {
+  const avail = BUILTIN_FIELDS.filter(k => records.filter(r=>r[k]!=null).length >= 2);
+  const pills = avail.map(k =>
+    `<div class="cpill ${k===chartKey?'active':''}" onclick="setCK('${k}')">${REF[k].name}</div>`
+  ).join('');
+  c.innerHTML = `<div class="slabel">Metric History</div>
+    <div class="chart-pills">${pills||'<span style="color:var(--muted);font-size:13px">Need ≥2 sessions per metric</span>'}</div>
+    <div class="chart-wrap"><canvas id="tc" height="250"></canvas></div>`;
+  if (avail.length) drawChart();
+}
+
+function drawChart() {
+  if (chartInst){chartInst.destroy();chartInst=null;}
+  const k=chartKey; const r=REF[k];
+  const pts=[...records].filter(rec=>rec[k]!=null).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const colors=pts.map(p=>({ok:'#3ddc84',hi:'#ff5c5c',lo:'#ffb347',na:'#6888aa'})[st(k,p[k])]);
+  chartInst=new Chart(document.getElementById('tc'),{
+    type:'line',
+    data:{labels:pts.map(p=>fmtShort(p.date)),datasets:[{
+      label:r.name,data:pts.map(p=>p[k]),
+      borderColor:'#4fa3f7',backgroundColor:'rgba(79,163,247,.07)',
+      borderWidth:2.5,pointBackgroundColor:colors,pointBorderColor:colors,
+      pointRadius:7,pointHoverRadius:10,fill:true,tension:.38
+    }]},
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#122040',borderColor:'#1e3256',borderWidth:1,titleColor:'#6888aa',bodyColor:'#ddeeff',callbacks:{label:ctx=>`${ctx.parsed.y} ${r.unit}`}}},scales:{x:{ticks:{color:'#6888aa',font:{size:10},maxRotation:45},grid:{color:'rgba(30,50,86,.4)'}},y:{ticks:{color:'#6888aa',font:{size:11}},grid:{color:'rgba(30,50,86,.4)'}}}}
+  });
+}
+function setCK(k){chartKey=k;renderTrends(document.getElementById('content'));}
+
+// ══════════════════════════════════════════════════════════════
+// SUMMARY TAB
+// ══════════════════════════════════════════════════════════════
+function renderSummary(c) {
+  let html = `<div class="slabel">Latest Value Per Metric</div>`;
+  Object.entries(GROUPS).forEach(([gname,g]) => {
+    const present = g.keys.filter(k=>records.some(r=>r[k]!=null));
+    if (!present.length) return;
+    html += `<div class="panel-card" style="margin-bottom:12px"><div class="panel-header"><span class="panel-icon">${g.icon}</span><span class="panel-title">${gname}</span></div>`;
+    present.forEach(k => {
+      const pts=[...records].filter(r=>r[k]!=null).sort((a,b)=>new Date(b.date)-new Date(a.date));
+      const latest=pts[0]; const prev=pts[1]; const val=latest[k];
+      const [bc,bl]=bdg(k,val); const sc=`s-${st(k,val)}`;
+      let trend='';
+      if (prev) {
+        const d=(val-prev[k]).toFixed(1); const up=parseFloat(d)>0;
+        trend=`<span style="font-size:10px;color:${up?'var(--danger)':'var(--accent2)'};margin-left:4px">${up?'↑':'↓'}${Math.abs(d)}</span>`;
+      }
+      html+=`<div class="metric-row">
+        <div class="mr-name"><div class="mn">${REF[k].name}</div><div class="mu">${fmtShort(latest.date)}</div></div>
+        <div class="mr-val ${sc}">${val}${trend}<span class="vu"> ${REF[k].unit}</span></div>
+        <div class="mr-badge ${bc}">${bl}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  c.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════════
+// REFERENCE TAB
+// ══════════════════════════════════════════════════════════════
+function renderRef(c) {
+  let html=`<div class="slabel">Normal Reference Ranges — Adult Male</div>`;
+  Object.entries(GROUPS).forEach(([gname,g])=>{
+    html+=`<div class="ref-group"><div class="rg-head">${g.icon} ${gname}</div>`;
+    g.keys.forEach(k=>{
+      const r=REF[k];
+      const rng=r.hdlMode?'Male &gt;40 · Low-risk &gt;55':r.lo===0?`&lt;${r.hi} ${r.unit}`:`${r.lo}–${r.hi} ${r.unit}`;
+      html+=`<div class="rg-row"><span>${r.name}</span><span class="rg-range">${rng}</span></div>`;
+    });
+    html+=`</div>`;
+  });
+  c.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ADD / EDIT MODAL
+// ══════════════════════════════════════════════════════════════
+function openAdd(idx) {
+  editIndex = idx !== undefined ? idx : null;
+  document.getElementById('addTitle').textContent = editIndex !== null ? 'Edit Session' : 'New Session';
+
+  // Reset date
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+  // Reset all built-in fields
+  BUILTIN_FIELDS.forEach(k => {
+    const el = document.getElementById('f-'+k);
+    if (el) el.value = '';
+  });
+
+  // Reset custom rows
+  customRowCount = 0;
+  document.getElementById('customRows').innerHTML = '';
+  document.getElementById('noCustomHint').style.display = 'block';
+
+  if (editIndex !== null) {
+    const r = records[editIndex];
+    document.getElementById('f-date').value = r.date;
+    BUILTIN_FIELDS.forEach(k => {
+      const el = document.getElementById('f-'+k);
+      if (el && r[k]!=null) el.value = r[k];
+    });
+    // Restore custom rows
+    (r._custom||[]).forEach(e => addCustomRow(e.name, e.unit, e.value));
+  } else {
+    // Pre-populate custom rows from saved global custom defs (remembered fields)
+    // Only if user has saved custom defs — add empty rows for them
+    customMetaDefs.forEach(def => addCustomRow(def.name, def.unit, ''));
+  }
+
+  document.getElementById('addOverlay').classList.add('open');
+  // Scroll modal to top
+  document.getElementById('addModal').scrollTop = 0;
+}
+
+// ── CUSTOM METRIC ROWS ────────────────────────────────────────
+function addCustomRow(name='', unit='', value='') {
+  customRowCount++;
+  const id = customRowCount;
+  const container = document.getElementById('customRows');
+  document.getElementById('noCustomHint').style.display = 'none';
+
+  const row = document.createElement('div');
+  row.className = 'custom-metric-row';
+  row.id = 'crow-'+id;
+  row.innerHTML = `
+    <div class="crow-label">
+      <span>🧬 Custom Test #${id}</span>
+      <button class="rm-btn" onclick="removeCustomRow(${id})" style="padding:3px 10px;font-size:11px;">✕ Remove</button>
+    </div>
+    <div class="crow-top">
+      <div class="fg">
+        <label>Test Name</label>
+        <input type="text" id="cname-${id}" placeholder="e.g. Iron, Ferritin, WBC…" value="${name}" style="font-size:14px;">
+      </div>
+      <div class="fg">
+        <label>Unit</label>
+        <input type="text" id="cunit-${id}" placeholder="e.g. mg/dL, g/L…" value="${unit}" style="font-size:14px;">
+      </div>
+    </div>
+    <div class="crow-bottom">
+      <div class="fg">
+        <label>Result Value</label>
+        <input type="number" id="cval-${id}" placeholder="Enter result" step="any" value="${value}" style="font-size:15px;font-weight:600;">
+      </div>
+    </div>`;
+  container.appendChild(row);
+}
+
+function removeCustomRow(id) {
+  const el = document.getElementById('crow-'+id);
+  if (el) el.remove();
+  if (!document.getElementById('customRows').children.length) {
+    document.getElementById('noCustomHint').style.display = 'block';
+  }
+}
+
+function collectCustomRows() {
+  const rows = document.querySelectorAll('.custom-metric-row');
+  const result = [];
+  rows.forEach(row => {
+    const id = row.id.replace('crow-','');
+    const name = (document.getElementById('cname-'+id)?.value||'').trim();
+    const unit = (document.getElementById('cunit-'+id)?.value||'').trim();
+    const val  = pn(document.getElementById('cval-'+id)?.value);
+    if (name && val !== null) result.push({name, unit, value: val});
+  });
+  return result;
+}
+
+// ── SAVE ─────────────────────────────────────────────────────
+function saveRecord() {
+  const date = document.getElementById('f-date').value;
+  if (!date) { toast('Please select a date ⚠️'); return; }
+
+  const rec = {date};
+
+  // Built-in fields
+  BUILTIN_FIELDS.forEach(k => {
+    const el = document.getElementById('f-'+k);
+    if (el) { const v=pn(el.value); if(v!=null) rec[k]=v; }
+  });
+
+  // Custom fields
+  const customs = collectCustomRows();
+  if (customs.length) rec._custom = customs;
+
+  // Update global custom defs (remember field names/units for future sessions)
+  customs.forEach(e => {
+    if (!customMetaDefs.find(d=>d.name===e.name)) {
+      customMetaDefs.push({name:e.name, unit:e.unit});
+    }
+  });
+
+  if (editIndex !== null) {
+    records[editIndex] = rec;
+    toast('Session updated ✓');
+  } else {
+    records.push(rec);
+    toast('Session saved ✓');
+  }
+
+  persist();
+  cm('addOverlay');
+  render();
+}
+
+// ══════════════════════════════════════════════════════════════
+// DELETE
+// ══════════════════════════════════════════════════════════════
+function askDelete(idx) {
+  deleteIndex = idx;
+  document.getElementById('delOverlay').classList.add('open');
+}
+function confirmDelete() {
+  if (deleteIndex !== null) {
+    records.splice(deleteIndex, 1);
+    persist(); render(); toast('Deleted');
+    deleteIndex = null;
+  }
+  cm('delOverlay');
+}
+
+// ══════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function setTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+function cm(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close overlay on outside tap — but NOT for addOverlay (accidental close risk)
+document.getElementById('delOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('delOverlay')) cm('delOverlay');
+});
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+load();
+render();
+</script>
+</body>
+</html>
